@@ -12,7 +12,7 @@ type Request struct {
 	Method   string
 	Path     string
 	Payload  interface{}
-	Response interface{}
+	Response *http.Response
 }
 
 // HTTPRequest provides http call
@@ -33,9 +33,7 @@ func HTTPRequest(req *Request) error {
 	if err != nil {
 		return err
 	}
-
-	defer response.Body.Close()
-	json.NewDecoder(response.Body).Decode(&req.Response)
+	req.Response = response
 
 	return nil
 }

@@ -36,6 +36,10 @@ func init() {
 		Name: "Muttley",
 		Age:  50,
 	}
+	payload = Person{
+		Name: "Richard Milhous Dastardly",
+		Age:  50,
+	}
 }
 
 func mockingServerCL() *httptest.Server {
@@ -45,6 +49,21 @@ func mockingServerCL() *httptest.Server {
 
 		case "GET":
 			log.Println("Method: ", r.Method)
+			resp, _ := json.Marshal(responseMock)
+			log.Println("Resp: ", string(resp))
+			fmt.Fprintln(w, string(resp))
+
+		case "POST":
+			log.Println("Method: ", r.Method)
+
+			var body Person
+
+			defer r.Body.Close()
+			json.NewDecoder(r.Body).Decode(&body)
+
+			person, _ := json.Marshal(body)
+			log.Println("Payload: ", string(person))
+
 			resp, _ := json.Marshal(responseMock)
 			log.Println("Resp: ", string(resp))
 			fmt.Fprintln(w, string(resp))
@@ -59,12 +78,31 @@ func Test_HTTPRequest_WithValidRequestMethodGET_ChangeCorrectResponse(t *testing
 	mockRequest.Method = "GET"
 
 	_ = HTTPRequest(&mockRequest)
+
+	defer mockRequest.Response.Body.Close()
+	json.NewDecoder(mockRequest.Response.Body).Decode(&response)
+	resp, _ := json.Marshal(response)
+
 	respMock, _ := json.Marshal(responseMock)
 
-	res, _ := json.Marshal(mockRequest.Response)
-	_ = json.Unmarshal(res, &response)
+	if string(respMock) != string(resp) {
+		t.Errorf(" Response Mock: %s != Response HTTPRequest: %s", respMock, resp)
+	}
+}
 
+func Test_HTTPRequest_WithValidRequestMethodPOST_ChangeCorrectResponse(t *testing.T) {
+	var response Dog
+	mockRequest.Path = mockingServerCL().URL
+	mockRequest.Method = "POST"
+	mockRequest.Payload = payload
+
+	_ = HTTPRequest(&mockRequest)
+
+	defer mockRequest.Response.Body.Close()
+	json.NewDecoder(mockRequest.Response.Body).Decode(&response)
 	resp, _ := json.Marshal(response)
+
+	respMock, _ := json.Marshal(responseMock)
 
 	if string(respMock) != string(resp) {
 		t.Errorf(" Response Mock: %s != Response HTTPRequest: %s", respMock, resp)
