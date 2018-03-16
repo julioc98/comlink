@@ -1,7 +1,9 @@
 package comlink
 
 import (
+	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 // Request is necessary data for http request
@@ -13,17 +15,27 @@ type Request struct {
 	Response interface{}
 }
 
-type Dog struct {
-	Name string `json:"name"`
-	Age  int    `json:"age"`
-}
-
 // HTTPRequest provides http call
 func HTTPRequest(req *Request) error {
-	req.Response = Dog{
-		Name: "Muttley",
-		Age:  50,
+
+	reqPayload, err := json.Marshal(req.Payload)
+	if err != nil {
+		return err
 	}
+
+	request, err := http.NewRequest(req.Method, req.Path, strings.NewReader(string(reqPayload)))
+	if err != nil {
+		return err
+	}
+
+	client := req.Client
+	response, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+
+	defer response.Body.Close()
+	json.NewDecoder(response.Body).Decode(&req.Response)
 
 	return nil
 }
